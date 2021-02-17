@@ -1,0 +1,24 @@
+[package]
+name = "loyalty-api"
+version = "0.1.0"
+authors = ["Yannick Heinrich <yannick.heinrich@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+env_logger = "0.8.3"
+
+rocket = { git = "https://github.com/SergioBenitez/Rocket" }
+diesel = { version = "1", features = ["sqlite"] }
+serde = {version = "1.0.123", features = ["derive"] }
+serde_json = "1.0.62"
+validator = { version = "0.12", features = ["derive"] }
+thiserror = "1.0.23"
+
+[dependencies.rocket_contrib]
+git = "https://github.com/SergioBenitez/Rocket"
+default-features = false
+features = ["json", "tera_templates", "uuid", "serve", "json", "diesel_sqlite_pool"]
+

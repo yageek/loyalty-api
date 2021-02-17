@@ -1,0 +1,2 @@
+[global.databases]
+loyalty_db = { url = "testdb.sqlite3" }
