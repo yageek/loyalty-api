@@ -1,6 +1,6 @@
 -- Your SQL goes here
 create table card (
-    id integer primary key autoincrement,
+    id integer primary key autoincrement not null,
     name text not null,
     color text,
     code text not null,

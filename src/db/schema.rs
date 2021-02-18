@@ -1,6 +1,6 @@
 table! {
     card (id) {
-        id -> Nullable<Integer>,
+        id -> Integer,
         name -> Text,
         color -> Nullable<Text>,
         code -> Text,
@@ -19,7 +19,4 @@ table! {
 
 joinable!(card -> users (user_id));
 
-allow_tables_to_appear_in_same_query!(
-    card,
-    users,
-);
+allow_tables_to_appear_in_same_query!(card, users,);

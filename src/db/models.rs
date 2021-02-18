@@ -1,5 +1,5 @@
 use super::schema::users;
-
+use serde::Serialize;
 #[derive(Insertable)]
 #[table_name = "users"]
 pub struct NewUser<'a> {
@@ -8,9 +8,9 @@ pub struct NewUser<'a> {
     pub pass: &'a str,
 }
 
-#[derive(Queryable)]
-pub struct User {
-    pub id: i32,
+#[derive(Queryable, Serialize)]
+pub struct UserFetch {
+    pub id: Option<i32>,
     pub email: String,
     pub name: String,
     pub pass: String,
