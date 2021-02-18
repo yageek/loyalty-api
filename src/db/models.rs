@@ -26,11 +26,18 @@ pub struct NewLoyalty<'a> {
     pub user_id: i32,
 }
 
-#[derive(Serialize, Queryable)]
+#[derive(Identifiable, Serialize, Queryable)]
+#[table_name = "cards"]
 pub struct Loyalty {
     pub id: i32,
     pub name: String,
     pub color: Option<String>,
     pub code: String,
     pub user_id: i32,
+}
+
+pub struct LoyaltyUpdate<'a> {
+    pub name: &'a str,
+    pub color: Option<&'a str>,
+    pub code: &'a str,
 }

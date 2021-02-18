@@ -34,6 +34,8 @@ enum APIError {
     NotAuthorized,
     #[error("parsing error")]
     ParsingError(#[from] ParseIntError),
+    #[error("unknown eerror")]
+    Unknown,
 }
 
 impl<'a> Responder<'a, 'static> for APIError {
@@ -70,6 +72,7 @@ fn rocket() -> rocket::Rocket {
             signin,
             get_user,
             sign_out,
+            update_loyalty,
             add_loyalty,
             get_loyalties,
             delete_loyalty
@@ -211,6 +214,41 @@ async fn add_loyalty(
         color: last.color,
         code: last.code,
     }))
+}
+
+#[put("/loyalties/<loyalty_id>", format = "json", data = "<body>")]
+async fn update_loyalty(
+    db: LoyaltyDbConn,
+    user: User,
+    body: Json<AddLoyalty>,
+    loyalty_id: String,
+) -> Result<Json<AddLoyaltyResponse>, APIError> {
+    use db::schema::cards::dsl::*;
+
+    db.run(move |c| {
+        let loyalty_id_int: i32 = loyalty_id.parse()?;
+        let target = cards.filter(id.eq(loyalty_id_int).and(user_id.eq(user.0)));
+
+        let result = diesel::update(target)
+            .set((
+                name.eq(&body.0.name),
+                code.eq(&body.0.code),
+                color.eq(&body.0.color),
+            ))
+            .execute(c);
+
+        match result {
+            Ok(size) if size > 0 => Ok(Json(AddLoyaltyResponse {
+                id: loyalty_id,
+                name: body.0.name,
+                color: body.0.color,
+                code: body.0.code,
+            })),
+            Err(e) => Err(APIError::DieselError(e)),
+            _ => Err(APIError::Unknown),
+        }
+    })
+    .await
 }
 
 #[get("/loyalties?<limit>&<offset>")]
