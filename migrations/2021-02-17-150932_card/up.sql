@@ -1,5 +1,5 @@
 -- Your SQL goes here
-create table card (
+create table cards (
     id integer primary key autoincrement not null,
     name text not null,
     color text,
@@ -8,7 +8,7 @@ create table card (
 );
 
 create table users (
-    id integer primary key autoincrement,
+    id integer primary key autoincrement not null,
     email text not null unique,
     name text not null,
     pass text not null

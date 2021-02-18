@@ -1,5 +1,5 @@
 table! {
-    card (id) {
+    cards (id) {
         id -> Integer,
         name -> Text,
         color -> Nullable<Text>,
@@ -10,13 +10,16 @@ table! {
 
 table! {
     users (id) {
-        id -> Nullable<Integer>,
+        id -> Integer,
         email -> Text,
         name -> Text,
         pass -> Text,
     }
 }
 
-joinable!(card -> users (user_id));
+joinable!(cards -> users (user_id));
 
-allow_tables_to_appear_in_same_query!(card, users,);
+allow_tables_to_appear_in_same_query!(
+    cards,
+    users,
+);

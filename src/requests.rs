@@ -1,7 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::db::models::NewUser;
 #[derive(Debug, Deserialize, Validate)]
 pub struct UserSignup {
     #[validate(email)]
@@ -14,4 +13,19 @@ pub struct UserSignup {
 pub struct UserSignIn {
     pub email: String,
     pub pass: String,
+}
+
+#[derive(Deserialize)]
+pub struct AddLoyalty {
+    pub name: String,
+    pub color: Option<String>,
+    pub code: String,
+}
+
+#[derive(Serialize)]
+pub struct AddLoyaltyResponse {
+    pub id: String,
+    pub name: String,
+    pub color: Option<String>,
+    pub code: String,
 }
