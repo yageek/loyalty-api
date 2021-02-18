@@ -209,7 +209,7 @@ async fn add_loyalty(
         .await?;
 
     Some(Json(AddLoyaltyResponse {
-        id: last.id.to_string(),
+        id: last.id,
         name: last.name,
         color: last.color,
         code: last.code,
@@ -239,7 +239,7 @@ async fn update_loyalty(
 
         match result {
             Ok(size) if size > 0 => Ok(Json(AddLoyaltyResponse {
-                id: loyalty_id,
+                id: loyalty_id_int,
                 name: body.0.name,
                 color: body.0.color,
                 code: body.0.code,
@@ -279,7 +279,7 @@ async fn get_loyalties(
             let new: Vec<_> = elements
                 .into_iter()
                 .map(|last| AddLoyaltyResponse {
-                    id: last.id.to_string(),
+                    id: last.id,
                     name: last.name,
                     color: last.color,
                     code: last.code,

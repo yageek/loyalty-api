@@ -24,7 +24,7 @@ pub struct AddLoyalty {
 
 #[derive(Serialize)]
 pub struct AddLoyaltyResponse {
-    pub id: String,
+    pub id: i32,
     pub name: String,
     pub color: Option<String>,
     pub code: String,
