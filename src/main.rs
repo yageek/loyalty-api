@@ -4,11 +4,11 @@ mod db;
 mod requests;
 use std::num::ParseIntError;
 
-use diesel::{prelude::*, result::DatabaseErrorKind};
+use diesel::{dsl::count_star, prelude::*, result::DatabaseErrorKind};
 
 use db::models::{NewLoyalty, NewUser};
 use diesel::RunQueryDsl;
-use requests::{AddLoyalty, AddLoyaltyResponse, UserSignIn, UserSignup};
+use requests::{AddLoyalty, AddLoyaltyResponse, PageResponse, UserSignIn, UserSignup};
 
 use rocket::http::Cookie;
 use rocket::{
@@ -105,24 +105,18 @@ async fn signin(
 ) -> Result<status::Custom<&'static str>, APIError> {
     use db::schema::users::dsl::*;
 
-    let fetched = db
+    let user = db
         .run(move |c| {
             let req = body.0;
 
             users
                 .filter(email.eq(req.email).and(pass.eq(req.pass)))
-                .limit(1)
-                .load::<db::models::User>(c)
+                .first::<db::models::User>(c)
         })
         .await?;
 
-    if fetched.is_empty() {
-        Ok(status::Custom(Status::Forbidden, "invalid credentials"))
-    } else {
-        let user = &fetched[0];
-        cookies.add_private(Cookie::new("user_id", user.id.to_string()));
-        Ok(status::Custom(Status::Ok, "connected"))
-    }
+    cookies.add_private(Cookie::new("user_id", user.id.to_string()));
+    Ok(status::Custom(Status::Ok, "connected"))
 }
 
 #[post("/signout")]
@@ -190,7 +184,7 @@ async fn add_loyalty(
 ) -> Option<Json<AddLoyaltyResponse>> {
     use db::schema::cards::dsl::*;
 
-    let mut last_inserted = db
+    let last = db
         .run(move |c| {
             let new_value = NewLoyalty {
                 name: &body.0.name,
@@ -206,13 +200,11 @@ async fn add_loyalty(
 
             Ok(cards
                 .order(id.desc())
-                .limit(1)
-                .load::<db::models::Loyalty>(c)
+                .first::<db::models::Loyalty>(c)
                 .ok()?)
         })
         .await?;
 
-    let last = last_inserted.remove(0);
     Some(Json(AddLoyaltyResponse {
         id: last.id.to_string(),
         name: last.name,
@@ -227,7 +219,7 @@ async fn get_loyalties(
     user: User,
     limit: Option<String>,
     offset: Option<String>,
-) -> Option<Json<Vec<AddLoyaltyResponse>>> {
+) -> Option<Json<PageResponse>> {
     use db::schema::cards::dsl::*;
 
     let limit = limit.and_then(|p| p.parse().ok()).unwrap_or(10);
@@ -235,25 +227,35 @@ async fn get_loyalties(
 
     let elements = db
         .run(move |c| {
-            cards
+            // We first count the elenments
+
+            let element_count = cards.select(count_star()).first(c).ok()?;
+
+            let elements = cards
                 .filter(user_id.eq(user.0))
                 .limit(limit)
                 .offset(offset)
                 .load::<db::models::Loyalty>(c)
-                .ok()
+                .ok()?;
+
+            let new: Vec<_> = elements
+                .into_iter()
+                .map(|last| AddLoyaltyResponse {
+                    id: last.id.to_string(),
+                    name: last.name,
+                    color: last.color,
+                    code: last.code,
+                })
+                .collect();
+
+            Ok(PageResponse {
+                count: element_count,
+                cards: new,
+            })
         })
         .await?;
 
-    let new: Vec<_> = elements
-        .into_iter()
-        .map(|last| AddLoyaltyResponse {
-            id: last.id.to_string(),
-            name: last.name,
-            color: last.color,
-            code: last.code,
-        })
-        .collect();
-    Some(Json(new))
+    Some(Json(elements))
 }
 
 #[delete("/loyalties/<loyalty_id>")]

@@ -29,3 +29,9 @@ pub struct AddLoyaltyResponse {
     pub color: Option<String>,
     pub code: String,
 }
+
+#[derive(Serialize)]
+pub struct PageResponse {
+    pub count: i64,
+    pub cards: Vec<AddLoyaltyResponse>,
+}
