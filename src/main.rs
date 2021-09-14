@@ -3,6 +3,7 @@ extern crate diesel;
 mod db;
 mod requests;
 use std::num::ParseIntError;
+use std::time::Duration;
 
 use diesel::{dsl::count_star, prelude::*, result::DatabaseErrorKind};
 
@@ -67,20 +68,25 @@ struct LoyaltyDbConn(diesel::SqliteConnection);
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    rocket::ignite().attach(LoyaltyDbConn::fairing()).mount(
-        "/",
-        routes![
-            signup,
-            signin,
-            get_user,
-            sign_out,
-            update_loyalty,
-            add_loyalty,
-            get_loyalties,
-            delete_loyalty,
-            search_loyalty,
-        ],
-    )
+    rocket::ignite()
+        .manage(SearchFakeTrigger {
+            count: AtomicUsize::new(0),
+        })
+        .attach(LoyaltyDbConn::fairing())
+        .mount(
+            "/",
+            routes![
+                signup,
+                signin,
+                get_user,
+                sign_out,
+                update_loyalty,
+                add_loyalty,
+                get_loyalties,
+                delete_loyalty,
+                search_loyalty,
+            ],
+        )
 }
 
 #[post("/signup", format = "json", data = "<body>")]
@@ -134,7 +140,7 @@ async fn sign_out(cookies: &CookieJar<'_>) -> status::Custom<&'static str> {
 #[derive(Debug)]
 struct User(i32);
 
-use rocket::async_trait;
+use rocket::{async_trait, tokio, State};
 
 #[crate::async_trait]
 impl<'a, 'r> FromRequest<'a, 'r> for User {
@@ -313,13 +319,28 @@ async fn delete_loyalty(
     Ok(status::Custom(Status::Ok, "loyalty deleted"))
 }
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+struct SearchFakeTrigger {
+    count: AtomicUsize,
+}
+
 #[post("/loyalties/search", format = "json", data = "<body>")]
 async fn search_loyalty(
     db: LoyaltyDbConn,
     user: User,
     body: Json<SearchRequest>,
+    trigger: State<'_, SearchFakeTrigger>,
 ) -> Result<Json<Vec<db::models::Loyalty>>, APIError> {
     use db::schema::cards::dsl::*;
+
+    let current_count = trigger.count.load(Ordering::Relaxed);
+
+    // Fake sleep
+    if current_count > 0 && current_count % 2 == 0 {
+        println!("Fake triggering sleep...");
+        tokio::time::sleep(Duration::from_secs(10)).await;
+    }
 
     let search_name = body.0.name_search;
     let elements = db
@@ -331,6 +352,6 @@ async fn search_loyalty(
                 .load::<db::models::Loyalty>(c)
         })
         .await?;
-
+    trigger.count.fetch_add(1, Ordering::Relaxed);
     Ok(Json(elements))
 }
