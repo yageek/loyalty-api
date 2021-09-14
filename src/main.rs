@@ -8,7 +8,9 @@ use diesel::{dsl::count_star, prelude::*, result::DatabaseErrorKind};
 
 use db::models::{NewLoyalty, NewUser};
 use diesel::RunQueryDsl;
-use requests::{AddLoyalty, AddLoyaltyResponse, PageResponse, UserSignIn, UserSignup};
+use requests::{
+    AddLoyalty, AddLoyaltyResponse, PageResponse, SearchRequest, UserSignIn, UserSignup,
+};
 
 use rocket::http::Cookie;
 use rocket::{
@@ -75,7 +77,8 @@ fn rocket() -> rocket::Rocket {
             update_loyalty,
             add_loyalty,
             get_loyalties,
-            delete_loyalty
+            delete_loyalty,
+            search_loyalty,
         ],
     )
 }
@@ -308,4 +311,26 @@ async fn delete_loyalty(
     db.run(move |c| diesel::delete(cards.filter(id.eq(loyalty_id))).execute(c))
         .await?;
     Ok(status::Custom(Status::Ok, "loyalty deleted"))
+}
+
+#[post("/loyalties/search", format = "json", data = "<body>")]
+async fn search_loyalty(
+    db: LoyaltyDbConn,
+    user: User,
+    body: Json<SearchRequest>,
+) -> Result<Json<Vec<db::models::Loyalty>>, APIError> {
+    use db::schema::cards::dsl::*;
+
+    let search_name = body.0.name_search;
+    let elements = db
+        .run(move |c| {
+            cards
+                .filter(name.like(format!("%{}%", search_name)))
+                .filter(user_id.eq(user.0))
+                .order(id)
+                .load::<db::models::Loyalty>(c)
+        })
+        .await?;
+
+    Ok(Json(elements))
 }

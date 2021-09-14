@@ -35,3 +35,8 @@ pub struct PageResponse {
     pub count: i64,
     pub cards: Vec<AddLoyaltyResponse>,
 }
+
+#[derive(Deserialize)]
+pub struct SearchRequest {
+    pub name_search: String,
+}
