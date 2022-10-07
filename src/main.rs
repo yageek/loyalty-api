@@ -210,10 +210,12 @@ async fn add_loyalty(
                 .execute(c)
                 .ok()?;
 
-            Ok(cards
-                .order(id.desc())
-                .first::<db::models::Loyalty>(c)
-                .ok()?)
+            Some(
+                cards
+                    .order(id.desc())
+                    .first::<db::models::Loyalty>(c)
+                    .ok()?,
+            )
         })
         .await?;
 
@@ -295,7 +297,7 @@ async fn get_loyalties(
                 })
                 .collect();
 
-            Ok(PageResponse {
+            Some(PageResponse {
                 count: element_count,
                 cards: new,
             })
