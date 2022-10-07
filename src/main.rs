@@ -2,18 +2,18 @@
 extern crate diesel;
 mod db;
 mod requests;
+use diesel::{dsl::count_star, prelude::*, result::DatabaseErrorKind};
+use rocket_sync_db_pools::database;
 use std::num::ParseIntError;
 use std::time::Duration;
-
-use diesel::{dsl::count_star, prelude::*, result::DatabaseErrorKind};
 
 use db::models::{NewLoyalty, NewUser};
 use diesel::RunQueryDsl;
 use requests::{
     AddLoyalty, AddLoyaltyResponse, PageResponse, SearchRequest, UserSignIn, UserSignup,
 };
-
 use rocket::http::Cookie;
+use rocket::serde::{json::Json, Serialize};
 use rocket::{
     delete, get,
     http::Status,
@@ -23,7 +23,6 @@ use rocket::{
     routes, Response,
 };
 use rocket::{http::CookieJar, request::FromRequest};
-use rocket_contrib::{database, json::Json};
 use thiserror::Error;
 use validator::{Validate, ValidationErrors};
 
@@ -67,8 +66,8 @@ impl<'a> Responder<'a, 'static> for APIError {
 struct LoyaltyDbConn(diesel::SqliteConnection);
 
 #[launch]
-fn rocket() -> rocket::Rocket {
-    rocket::ignite()
+fn rocket() -> _ {
+    rocket::build()
         .manage(SearchFakeTrigger {
             count: AtomicUsize::new(0),
         })
@@ -140,14 +139,14 @@ async fn sign_out(cookies: &CookieJar<'_>) -> status::Custom<&'static str> {
 #[derive(Debug)]
 struct User(i32);
 
-use rocket::{async_trait, tokio, State};
+use rocket::{tokio, State};
 
-#[crate::async_trait]
-impl<'a, 'r> FromRequest<'a, 'r> for User {
+#[rocket::async_trait]
+impl<'a> FromRequest<'a> for User {
     type Error = APIError;
 
     async fn from_request(
-        request: &'a rocket::Request<'r>,
+        request: &'a rocket::Request<'_>,
     ) -> rocket::request::Outcome<Self, Self::Error> {
         if let Some(user) = request
             .cookies()
@@ -332,7 +331,7 @@ async fn search_loyalty(
     db: LoyaltyDbConn,
     user: User,
     body: Json<SearchRequest>,
-    trigger: State<'_, SearchFakeTrigger>,
+    trigger: &State<SearchFakeTrigger>,
 ) -> Result<Json<Vec<db::models::Loyalty>>, APIError> {
     use db::schema::cards::dsl::*;
 
